@@ -39,27 +39,23 @@ test "trmv: x ← R⋅x, x ← Rᵀ⋅x" {
     const page = std.testing.allocator;
     const ArrF64 = Array(f64){ .allocator = page };
 
-    const R: [][]f64 = try ArrF64.matrix(4, 4);
-    defer ArrF64.free(R);
+    const A: [][]f64 = try ArrF64.matrix(4, 4);
+    defer ArrF64.free(A);
 
     const x: []f64 = try ArrF64.vector(4);
     defer ArrF64.free(x);
 
-    inline for (.{ 2.0, 6.0, 8.0, 1.0 }, R[0]) |val, *ptr| ptr.* = val;
-    inline for (.{ 0.0, 1.0, 7.0, 5.0 }, R[1]) |val, *ptr| ptr.* = val;
-    inline for (.{ 0.0, 0.0, 4.0, 9.0 }, R[2]) |val, *ptr| ptr.* = val;
-    inline for (.{ 0.0, 0.0, 0.0, 3.0 }, R[3]) |val, *ptr| ptr.* = val;
+    inline for (.{ 2.0, 6.0, 8.0, 1.0 }, A[0]) |val, *ptr| ptr.* = val;
+    inline for (.{ 6.0, 1.0, 7.0, 5.0 }, A[1]) |val, *ptr| ptr.* = val;
+    inline for (.{ 8.0, 7.0, 4.0, 9.0 }, A[2]) |val, *ptr| ptr.* = val;
+    inline for (.{ 1.0, 5.0, 9.0, 3.0 }, A[3]) |val, *ptr| ptr.* = val;
 
     const Z: [2][4]f64 = .{ .{ 7.1, 3.6, 3.5, 0.9 }, .{ 1.0, 3.7, 9.7, 6.7 } };
 
-    inline for (.{ 'N', 'T' }, Z) |ul, z| {
+    inline for (.{ 'N', 'T' }, Z) |tA, z| {
         inline for (.{ 0.5, 0.7, 0.2, 0.3 }, x) |val, *ptr| ptr.* = val;
-        try trmv('R', ul, R, x);
-        for (x, &z, 0..) |x_i, z_i, i| {
-            if (testing.expectApproxEqRel(x_i, z_i, 1e-15)) |_| {} else |_| {
-                std.debug.print("x[{d}] = {d}, z[{d}] = {d}\n", .{ i, x_i, i, z_i });
-            }
-        }
+        try trmv('R', tA, A, x);
+        for (x, &z) |x_i, z_i| try testing.expectApproxEqRel(x_i, z_i, 1e-15);
     }
 }
 
