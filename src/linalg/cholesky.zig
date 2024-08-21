@@ -1,4 +1,12 @@
-const Errors = error{NotPositiveDefinite};
+//! References
+//! [1] W. H. Press, S. A. Teukolsky, W. T. Vetterling, B. P. Flannery,
+//!     "Numerical Recipes 3rd Edition: The Art of Scientific Computing,"
+//!     2007, Sec. 2.9, 2.10.1
+
+const Errors = error{
+    NotPositiveDefinite,
+    SingularError,
+};
 
 pub fn cholesky(A: [][]f64) !void {
     const n: usize = A.len;
@@ -20,7 +28,7 @@ pub fn cholesky(A: [][]f64) !void {
     }
 }
 
-test "Cholesky" {
+test "cholesky → L⋅Lᵀ" {
     const page = std.testing.allocator;
     const ArrF64 = Array(f64){ .allocator = page };
 
@@ -47,6 +55,118 @@ test "Cholesky" {
     }
 }
 
+fn update(R: [][]f64, u: []f64, v: []f64, b: []f64) Errors!void {
+    const n: usize = u.len;
+    if (n != v.len) unreachable;
+
+    // Find largest k such that u[k] ≠ 0.
+    var k: usize = 0;
+    for (b, u, 0..) |*b_i, u_i, i| {
+        if (u_i != 0.0) k = i;
+        b_i.* = u_i;
+    }
+
+    // Transform R + u⋅vᵀ to upper Hessenberg.
+    if (0 < k) {
+        var i: usize = k - 1;
+        while (0 <= i) : (i -= 1) {
+            rotate(R, i, n, b[i], -b[i + 1]);
+            b[i] = apy2(b[i], b[i + 1]);
+            if (i == 0) break;
+        }
+    }
+
+    for (R[0], v) |*R_0i, v_i| R_0i.* += b[0] * v_i;
+
+    // Transform upper Hessenberg matrix to upper triangular.
+    for (0..k, 1..) |j, jp1| rotate(R, j, n, R[j][j], -R[jp1][j]);
+
+    // Check singularity.
+    for (R, 0..) |R_j, j| if (R_j[j] == 0.0) return Errors.SingularError;
+}
+
+fn rotate(R: [][]f64, i: usize, n: usize, a: f64, b: f64) void {
+    var c: f64 = undefined;
+    var s: f64 = undefined;
+    var w: f64 = undefined;
+    var y: f64 = undefined;
+    var f: f64 = undefined;
+
+    if (a == 0.0) {
+        c = 0.0;
+        s = if (b < 0.0) -1.0 else 1.0;
+    } else if (@abs(a) > @abs(b)) {
+        f = b / a;
+        c = copysign(1.0 / @sqrt(1.0 + pow2(f)), a);
+        s = f * c;
+    } else {
+        f = a / b;
+        s = copysign(1.0 / @sqrt(1.0 + pow2(f)), b);
+        c = f * s;
+    }
+
+    for (R[i][i..n], R[i + 1][i..n]) |*R_ij, *R_ip1j| {
+        y = R_ij.*;
+        w = R_ip1j.*;
+        R_ij.* = c * y - s * w;
+        R_ip1j.* = s * y + c * w;
+    }
+}
+
+test "update Rᵀ⋅R" {
+    const page = std.testing.allocator;
+    const ArrF64 = Array(f64){ .allocator = page };
+
+    const R: [][]f64 = try ArrF64.matrix(3, 3);
+    defer ArrF64.free(R);
+
+    inline for (.{ 2.0, 6.0, 8.0 }, R[0]) |val, *ptr| ptr.* = val;
+    inline for (.{ 0.0, 1.0, 5.0 }, R[1]) |val, *ptr| ptr.* = val;
+    inline for (.{ 0.0, 0.0, 3.0 }, R[2]) |val, *ptr| ptr.* = val;
+
+    const u: []f64 = try ArrF64.vector(3);
+    defer ArrF64.free(u);
+
+    const v: []f64 = try ArrF64.vector(3);
+    defer ArrF64.free(v);
+
+    const b: []f64 = try ArrF64.vector(3);
+    defer ArrF64.free(b);
+
+    inline for (.{ 1.0, 5.0, 3.0 }, u) |val, *ptr| ptr.* = val;
+    inline for (.{ 2.0, 3.0, 1.0 }, v) |val, *ptr| ptr.* = val;
+
+    try update(R, u, v, b);
+
+    const A: [3][3]f64 = .{ // answers
+        .{ 0x1.8a85c24f70658p+03, 0x1.44715e1c46896p+04, 0x1.be6ef01685ec3p+03 },
+        .{ -0x1.0000000000000p-52, 0x1.4e2ba31c14a89p+01, 0x1.28c0f1b618468p+02 },
+        .{ 0x0.0000000000000p+00, 0x0.0000000000000p+00, -0x1.dd36445718509p-01 },
+    };
+
+    for (A, R) |A_i, R_i| try testing.expect(std.mem.eql(f64, &A_i, R_i));
+}
+
+fn apy2(x: f64, y: f64) f64 {
+    // nan case
+    if (x != x) return x;
+    if (y != y) return y;
+
+    // general case
+    const xabs: f64 = @abs(x);
+    const yabs: f64 = @abs(y);
+    const w: f64 = @max(xabs, yabs);
+    const z: f64 = @min(xabs, yabs);
+
+    return if (z == 0.0) w else w * @sqrt(1.0 + pow2(z / w));
+}
+
+inline fn pow2(x: f64) f64 {
+    return x * x;
+}
+
 const std = @import("std");
 const testing = std.testing;
+const copysign = std.math.copysign;
+
 const Array = @import("./array.zig").Array;
