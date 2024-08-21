@@ -5,6 +5,7 @@
 
 const Errors = error{
     NotPositiveDefinite,
+    DimensionMismatch,
     SingularError,
     NanError,
 };
@@ -18,7 +19,7 @@ pub fn cholesky(A: [][]f64) !void {
             t = A[i][j];
             for (0..i) |k| t -= A[i][k] * A[j][k];
             if (i == j) {
-                if (t <= 0.0) return Errors.NotPositiveDefinite;
+                if (t <= 0.0) return error.NotPositiveDefinite;
                 A[i][i] = @sqrt(t);
             } else A[j][i] = t / A[i][i];
         }
@@ -56,9 +57,9 @@ test "cholesky → L⋅Lᵀ" {
     }
 }
 
-fn update(R: [][]f64, u: []f64, v: []f64, b: []f64) Errors!void {
+fn update(R: [][]f64, u: []f64, v: []f64, b: []f64) !void {
     const n: usize = u.len;
-    if (n != v.len) unreachable;
+    if (n != v.len) return error.DimensionMismatch;
 
     // Find largest k such that u[k] ≠ 0.
     var k: usize = 0;
@@ -83,7 +84,7 @@ fn update(R: [][]f64, u: []f64, v: []f64, b: []f64) Errors!void {
     for (0..k, 1..) |j, jp1| rotate(R, j, n, R[j][j], -R[jp1][j]);
 
     // Check singularity.
-    for (R, 0..) |R_j, j| if (R_j[j] == 0.0) return Errors.SingularError;
+    for (R, 0..) |R_j, j| if (R_j[j] == 0.0) return error.SingularError;
 }
 
 fn rotate(R: [][]f64, i: usize, n: usize, a: f64, b: f64) void {
@@ -148,9 +149,9 @@ test "update Rᵀ⋅R" {
     for (A, R) |A_i, R_i| try testing.expect(std.mem.eql(f64, &A_i, R_i));
 }
 
-fn apy2(x: f64, y: f64) Errors!f64 {
+fn apy2(x: f64, y: f64) !f64 {
     // nan case
-    if (x != x or y != y) return Errors.NanError;
+    if (x != x or y != y) return error.NanError;
 
     // general case
     const X: f64 = @abs(x);

@@ -1,8 +1,8 @@
-const Error = error{DimensionMismatch};
+const Errors = error{DimensionMismatch};
 
-pub fn trsv(comptime ul: u8, comptime tA: u8, A: [][]f64, x: []f64) Error!void {
+pub fn trsv(comptime ul: u8, comptime tA: u8, A: [][]f64, x: []f64) !void {
     const n: usize = A.len;
-    if (n != x.len) return Error.DimensionMismatch;
+    if (n != x.len) return error.DimensionMismatch;
 
     switch (ul) {
         'R', 'U' => {
