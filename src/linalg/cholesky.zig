@@ -6,6 +6,7 @@
 const Errors = error{
     NotPositiveDefinite,
     SingularError,
+    NanError,
 };
 
 pub fn cholesky(A: [][]f64) !void {
@@ -71,7 +72,7 @@ fn update(R: [][]f64, u: []f64, v: []f64, b: []f64) Errors!void {
         var i: usize = k - 1;
         while (0 <= i) : (i -= 1) {
             rotate(R, i, n, b[i], -b[i + 1]);
-            b[i] = apy2(b[i], b[i + 1]);
+            b[i] = try apy2(b[i], b[i + 1]);
             if (i == 0) break;
         }
     }
@@ -147,16 +148,15 @@ test "update Rᵀ⋅R" {
     for (A, R) |A_i, R_i| try testing.expect(std.mem.eql(f64, &A_i, R_i));
 }
 
-fn apy2(x: f64, y: f64) f64 {
+fn apy2(x: f64, y: f64) Errors!f64 {
     // nan case
-    if (x != x) return x;
-    if (y != y) return y;
+    if (x != x or y != y) return Errors.NanError;
 
     // general case
-    const xabs: f64 = @abs(x);
-    const yabs: f64 = @abs(y);
-    const w: f64 = @max(xabs, yabs);
-    const z: f64 = @min(xabs, yabs);
+    const X: f64 = @abs(x);
+    const Y: f64 = @abs(y);
+    const w: f64 = @max(X, Y);
+    const z: f64 = @min(X, Y);
 
     return if (z == 0.0) w else w * @sqrt(1.0 + pow2(z / w));
 }
