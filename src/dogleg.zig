@@ -68,25 +68,17 @@ test "Rosenbrock: xk = .{ -1.2, 1.0 }" {
     inline for (.{ 0x1.0000000000000p+0, 0x1.4b1d7f7c3508bp+2 }, Bk[1]) |v, *p| p.* = v;
 
     // gk = exact gradient at xk = .{ -1.2, 1.0 }
-    const gk: []f64 = try ArrF64.vector(2);
-    defer ArrF64.free(gk);
+    var gk: [2]f64 = .{ -0x1.af33333333332p+7, -0x1.5ffffffffffffp+6 };
 
-    inline for (.{ -0x1.af33333333332p+7, -0x1.5ffffffffffffp+6 }, gk) |v, *p| p.* = v;
-
-    const pk: []f64 = try ArrF64.vector(2);
-    defer ArrF64.free(pk);
-
-    const pN: []f64 = try ArrF64.vector(2);
-    defer ArrF64.free(pN);
-
-    const pS: []f64 = try ArrF64.vector(2);
-    defer ArrF64.free(pS);
+    var pk: [2]f64 = undefined;
+    var pN: [2]f64 = undefined;
+    var pS: [2]f64 = undefined;
 
     // trust-region max. step size at xk = .{ -1.2, 1.0 }
     const sz: f64 = 3.0e-1;
 
-    try dogleg(Bk, gk, pk, pN, pS, sz);
-    try testing.expect(@sqrt(dot(pk, pk)) <= sz);
+    try dogleg(Bk, &gk, &pk, &pN, &pS, sz);
+    try testing.expect(@sqrt(dot(&pk, &pk)) <= sz);
 }
 
 fn dot(x: []f64, y: []f64) f64 {

@@ -37,11 +37,11 @@ test "cholesky → L⋅Lᵀ" {
     const A: [][]f64 = try ArrF64.matrix(5, 5);
     defer ArrF64.free(A);
 
-    inline for (.{ 5.0, -2.0, 0.0, -2.0, -2.0 }, A[0]) |val, *ptr| ptr.* = val;
-    inline for (.{ -2.0, 5.0, -2.0, 0.0, 0.0 }, A[1]) |val, *ptr| ptr.* = val;
-    inline for (.{ 0.0, -2.0, 5.0, -2.0, 0.0 }, A[2]) |val, *ptr| ptr.* = val;
-    inline for (.{ -2.0, 0.0, -2.0, 5.0, -2.0 }, A[3]) |val, *ptr| ptr.* = val;
-    inline for (.{ -2.0, 0.0, 0.0, -2.0, 5.0 }, A[4]) |val, *ptr| ptr.* = val;
+    inline for (.{ 5.0, -2.0, 0.0, -2.0, -2.0 }, A[0]) |v, *p| p.* = v;
+    inline for (.{ -2.0, 5.0, -2.0, 0.0, 0.0 }, A[1]) |v, *p| p.* = v;
+    inline for (.{ 0.0, -2.0, 5.0, -2.0, 0.0 }, A[2]) |v, *p| p.* = v;
+    inline for (.{ -2.0, 0.0, -2.0, 5.0, -2.0 }, A[3]) |v, *p| p.* = v;
+    inline for (.{ -2.0, 0.0, 0.0, -2.0, 5.0 }, A[4]) |v, *p| p.* = v;
 
     const Z: struct { [1]f64, [2]f64, [3]f64, [4]f64, [5]f64 } = .{
         .{0x1.1e3779b97f4a8p+1},
@@ -52,6 +52,7 @@ test "cholesky → L⋅Lᵀ" {
     };
 
     try cholesky(A);
+
     inline for (Z, 0..) |z, i| {
         for (z, 0..) |z_j, j| try testing.expectApproxEqRel(z_j, A[i][j], 1e-15);
     }
@@ -122,23 +123,15 @@ test "update Rᵀ⋅R" {
     const R: [][]f64 = try ArrF64.matrix(3, 3);
     defer ArrF64.free(R);
 
-    inline for (.{ 2.0, 6.0, 8.0 }, R[0]) |val, *ptr| ptr.* = val;
-    inline for (.{ 0.0, 1.0, 5.0 }, R[1]) |val, *ptr| ptr.* = val;
-    inline for (.{ 0.0, 0.0, 3.0 }, R[2]) |val, *ptr| ptr.* = val;
+    inline for (.{ 2.0, 6.0, 8.0 }, R[0]) |v, *p| p.* = v;
+    inline for (.{ 0.0, 1.0, 5.0 }, R[1]) |v, *p| p.* = v;
+    inline for (.{ 0.0, 0.0, 3.0 }, R[2]) |v, *p| p.* = v;
 
-    const u: []f64 = try ArrF64.vector(3);
-    defer ArrF64.free(u);
+    var u: [3]f64 = .{ 1.0, 5.0, 3.0 };
+    var v: [3]f64 = .{ 2.0, 3.0, 1.0 };
+    var b: [3]f64 = undefined;
 
-    const v: []f64 = try ArrF64.vector(3);
-    defer ArrF64.free(v);
-
-    const b: []f64 = try ArrF64.vector(3);
-    defer ArrF64.free(b);
-
-    inline for (.{ 1.0, 5.0, 3.0 }, u) |val, *ptr| ptr.* = val;
-    inline for (.{ 2.0, 3.0, 1.0 }, v) |val, *ptr| ptr.* = val;
-
-    try update(R, u, v, b);
+    try update(R, &u, &v, &b);
 
     const A: [3][3]f64 = .{ // answers
         .{ 0x1.8a85c24f70658p+03, 0x1.44715e1c46896p+04, 0x1.be6ef01685ec3p+03 },

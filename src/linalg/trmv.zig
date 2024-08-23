@@ -42,19 +42,18 @@ test "trmv: x ← R⋅x, x ← Rᵀ⋅x" {
     const A: [][]f64 = try ArrF64.matrix(4, 4);
     defer ArrF64.free(A);
 
-    const x: []f64 = try ArrF64.vector(4);
-    defer ArrF64.free(x);
+    inline for (.{ 2.0, 6.0, 8.0, 1.0 }, A[0]) |v, *p| p.* = v;
+    inline for (.{ 6.0, 1.0, 7.0, 5.0 }, A[1]) |v, *p| p.* = v;
+    inline for (.{ 8.0, 7.0, 4.0, 9.0 }, A[2]) |v, *p| p.* = v;
+    inline for (.{ 1.0, 5.0, 9.0, 3.0 }, A[3]) |v, *p| p.* = v;
 
-    inline for (.{ 2.0, 6.0, 8.0, 1.0 }, A[0]) |val, *ptr| ptr.* = val;
-    inline for (.{ 6.0, 1.0, 7.0, 5.0 }, A[1]) |val, *ptr| ptr.* = val;
-    inline for (.{ 8.0, 7.0, 4.0, 9.0 }, A[2]) |val, *ptr| ptr.* = val;
-    inline for (.{ 1.0, 5.0, 9.0, 3.0 }, A[3]) |val, *ptr| ptr.* = val;
+    var x: [4]f64 = undefined;
 
     const Z: [2][4]f64 = .{ .{ 7.1, 3.6, 3.5, 0.9 }, .{ 1.0, 3.7, 9.7, 6.7 } };
 
     inline for (.{ 'N', 'T' }, Z) |tA, z| {
-        inline for (.{ 0.5, 0.7, 0.2, 0.3 }, x) |val, *ptr| ptr.* = val;
-        try trmv('R', tA, A, x);
+        inline for (.{ 0.5, 0.7, 0.2, 0.3 }, &x) |v, *p| p.* = v;
+        try trmv('R', tA, A, &x);
         for (x, &z) |x_i, z_i| try testing.expectApproxEqRel(x_i, z_i, 1e-15);
     }
 }
