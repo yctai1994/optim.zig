@@ -3,17 +3,17 @@
 //!     "Numerical Optimization 2nd Edition,"
 //!     2006, Lemma 4.2
 
-const Errors = error{DoglegError};
+const Errors = error{DimensionMismatch};
 
-// Bk := approx. Hessian at xk, should be Cholesky factorized (Rᵀ⋅R)
+// Bk := Hessian at xk, should be Cholesky factorized (Rᵀ⋅R)
 // gk := gradient at xk
-// pk := final search direction for xk
-// pN := buffer for quasi-Newton direction
-// pS := buffer for steepest-descent direction
+// pk := dogleg's step for xk
+// pN := buffer for quasi-Newton's step
+// pS := buffer for steepest-descent's step
 // sz := trust-region max. step size Δₖ
 fn dogleg(Bk: [][]f64, gk: []f64, pk: []f64, pN: []f64, pS: []f64, sz: f64) !void {
     const n: usize = Bk.len;
-    if (n != gk.len or n != pN.len or n != pS.len) return error.DoglegError;
+    if (n != gk.len or n != pN.len or n != pS.len) return error.DimensionMismatch;
 
     const sz2: f64 = sz * sz;
 
@@ -36,7 +36,7 @@ fn dogleg(Bk: [][]f64, gk: []f64, pk: []f64, pN: []f64, pS: []f64, sz: f64) !voi
     for (0..n) |i| pS[i] = -steep_ak * gk[i]; // pS ← -αₖ⋅∇f(xk)
 
     // ‖pS + β⋅(pN - pS)‖² = Δₖ², s.t. 0 ≤ β ≤ 1
-    for (0..n) |i| pk[i] = pN[i] - pS[i];
+    for (0..n) |i| pk[i] = pN[i] - pS[i]; // here, pk is just a temp. buffer
     const a: f64 = dot(pk, pk); // ‖pN - pS‖²
     const b: f64 = dot(pS, pk); // pS⋅(pN - pS)
     const c: f64 = dot(pS, pS) - sz2; // ‖pS‖² - Δₖ²
@@ -56,11 +56,48 @@ fn dogleg(Bk: [][]f64, gk: []f64, pk: []f64, pN: []f64, pS: []f64, sz: f64) !voi
     return;
 }
 
+test "Rosenbrock: xk = .{ -1.2, 1.0 }" {
+    const page = std.testing.allocator;
+    const ArrF64 = Array(f64){ .allocator = page };
+
+    // Bk = Rᵀ⋅R = cholescky( exact Hessian at xk = .{ -1.2, 1.0 } )
+    const Bk: [][]f64 = try ArrF64.matrix(2, 2);
+    defer ArrF64.free(Bk);
+
+    inline for (.{ 0x1.23c0d99c17436p+5, 0x1.a52d7f6fc5311p+3 }, Bk[0]) |v, *p| p.* = v;
+    inline for (.{ 0x1.0000000000000p+0, 0x1.4b1d7f7c3508bp+2 }, Bk[1]) |v, *p| p.* = v;
+
+    // gk = exact gradient at xk = .{ -1.2, 1.0 }
+    const gk: []f64 = try ArrF64.vector(2);
+    defer ArrF64.free(gk);
+
+    inline for (.{ -0x1.af33333333332p+7, -0x1.5ffffffffffffp+6 }, gk) |v, *p| p.* = v;
+
+    const pk: []f64 = try ArrF64.vector(2);
+    defer ArrF64.free(pk);
+
+    const pN: []f64 = try ArrF64.vector(2);
+    defer ArrF64.free(pN);
+
+    const pS: []f64 = try ArrF64.vector(2);
+    defer ArrF64.free(pS);
+
+    // trust-region max. step size at xk = .{ -1.2, 1.0 }
+    const sz: f64 = 3.0e-1;
+
+    try dogleg(Bk, gk, pk, pN, pS, sz);
+    try testing.expect(@sqrt(dot(pk, pk)) <= sz);
+}
+
 fn dot(x: []f64, y: []f64) f64 {
     var t: f64 = 0.0;
     for (x, y) |x_i, y_i| t += x_i * y_i;
     return t;
 }
 
+const std = @import("std");
+const testing = std.testing;
+
 const trmv = @import("./linalg/trmv.zig").trmv;
 const trsv = @import("./linalg/trsv.zig").trsv;
+const Array = @import("./linalg/array.zig").Array;
