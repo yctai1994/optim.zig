@@ -182,18 +182,15 @@ test "Gradient Projection Method" {
     try testing.expect(rosenbrock.func(&xt) <= rosenbrock.func(&xk));
 }
 
-fn insertionSort(arr: []f64) void {
-    if (arr.len == 1) return;
+fn insertionSort(a: []f64) void {
+    if (a.len == 1) return;
     var j: usize = undefined;
 
-    for (arr[1..], 1..) |val, i| {
+    for (a[1..], 1..) |v, i| {
         j = i;
-        while (0 < j and val < arr[j - 1]) : (j -= 1) {
-            arr[j] = arr[j - 1];
-        }
-        arr[j] = val;
+        while (0 < j and v < a[j - 1]) : (j -= 1) a[j] = a[j - 1];
+        a[j] = v;
     }
-    return;
 }
 
 fn dot(x: []f64, y: []f64) !f64 {
@@ -206,7 +203,6 @@ fn dot(x: []f64, y: []f64) !f64 {
 const INF: f64 = std.math.inf(f64);
 
 const std = @import("std");
-const debug = std.debug;
 const testing = std.testing;
 
 const trmv = @import("./linalg/trmv.zig").trmv;
