@@ -58,7 +58,7 @@ test "cholesky → L⋅Lᵀ" {
     }
 }
 
-fn update(R: [][]f64, u: []f64, v: []f64, b: []f64) !void {
+pub fn update(R: [][]f64, u: []f64, v: []f64, b: []f64) !void {
     const n: usize = u.len;
     if (n != v.len) return error.DimensionMismatch;
 

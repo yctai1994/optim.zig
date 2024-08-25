@@ -3,7 +3,7 @@
 //!     "Numerical Optimization 2nd Edition,"
 //!     2006, Algorithm 3.5, 3.6
 
-const Errors = error{
+pub const Errors = error{
     DescentDirectionError,
     DimensionMismatch,
     SearchError,
@@ -18,7 +18,7 @@ const WolfeParams = struct {
 };
 
 // fg := function and gradient
-fn search(
+pub fn search(
     fg: anytype,
     xk: []f64,
     gk: []f64,

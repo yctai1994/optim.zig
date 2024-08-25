@@ -11,7 +11,7 @@ const Errors = error{DimensionMismatch};
 // pN := buffer for quasi-Newton's step
 // pS := buffer for steepest-descent's step
 // sz := trust-region max. step size Δₖ
-fn dogleg(Bk: [][]f64, gk: []f64, pk: []f64, pN: []f64, pS: []f64, sz: f64) !void {
+pub fn dogleg(Bk: [][]f64, gk: []f64, pk: []f64, pN: []f64, pS: []f64, sz: f64) !void {
     const n: usize = Bk.len;
     if (n != gk.len or n != pN.len or n != pS.len) return error.DimensionMismatch;
 

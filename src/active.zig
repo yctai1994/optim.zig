@@ -8,7 +8,7 @@ const Errors = error{DimensionMismatch};
 // t := buffer, storing max. step of each dimension
 // x := start point
 // d := direction (including length)
-fn checkbounds(lb: []f64, ub: []f64, x: []f64, d: []f64, t: []f64) void {
+pub fn checkbounds(lb: []f64, ub: []f64, x: []f64, d: []f64, t: []f64) void {
     const n: usize = x.len;
     for (0..n) |i| {
         if (-INF < lb[i] and d[i] < 0.0) {
@@ -17,6 +17,21 @@ fn checkbounds(lb: []f64, ub: []f64, x: []f64, d: []f64, t: []f64) void {
             t[i] = (ub[i] - x[i]) / d[i];
         } else { // (d_i == 0) or (no bounds in d_i direction)
             t[i] = INF;
+        }
+    }
+}
+
+pub fn truncate(lb: []f64, ub: []f64, x: []f64, Wk: []usize, ta: *usize) void {
+    ta.* = 0; // count active bounds
+    for (x, lb, ub, 0..) |*x_i, lb_i, ub_i, i| {
+        if (x_i.* < lb_i) {
+            x_i.* = lb_i;
+            Wk[ta.*] = i;
+            ta.* += 1;
+        } else if (ub_i < x_i.*) {
+            x_i.* = ub_i;
+            Wk[ta.*] = i;
+            ta.* += 1;
         }
     }
 }
@@ -31,11 +46,11 @@ fn checkbounds(lb: []f64, ub: []f64, x: []f64, d: []f64, t: []f64) void {
 // xc := buffer for storing Cauchy point
 // Wk := buffer for working (active) set
 // ta := pointer for counting number of activated bounds
-fn project(lb: []f64, ub: []f64, xk: []f64, gk: []f64, Bk: [][]f64, pk: []f64, tk: []f64, ts: []f64, xt: []f64, xc: []f64, Wk: []usize, ta: *usize) !void {
+pub fn project(lb: []f64, ub: []f64, xk: []f64, gk: []f64, Bk: [][]f64, pk: []f64, tk: []f64, ts: []f64, xt: []f64, xc: []f64, Wk: []usize, ta: *usize) !void {
     const n: usize = xk.len;
 
     for (0..n) |i| pk[i] = -gk[i];
-    checkbounds(xk, pk, tk, lb, ub);
+    checkbounds(lb, ub, xk, pk, tk);
 
     @memcpy(ts, tk); // use bf as buffer, for sorting
     insertionSort(ts); // sorted tk
@@ -94,7 +109,7 @@ fn project(lb: []f64, ub: []f64, xk: []f64, gk: []f64, Bk: [][]f64, pk: []f64, t
 // xt := buffer for linear algebra
 // xc := Cauchy point
 // Ck := buffer for Ak⋅Hk⋅Akᵀ
-fn solveKKT(xk: []f64, gk: []f64, Bk: [][]f64, pk: []f64, xt: []f64, xc: []f64, Ck: [][]f64, Wk: []usize, ta: usize) !void {
+pub fn solveKKT(xk: []f64, gk: []f64, Bk: [][]f64, pk: []f64, xt: []f64, xc: []f64, Ck: [][]f64, Wk: []usize, ta: usize) !void {
     if (ta == 0) return;
     const n: usize = xk.len;
 
@@ -160,10 +175,8 @@ test "Gradient Projection Method" {
 
     // tk = breakpoints' step sizes
     var tk: [2]f64 = undefined;
-
-    checkbounds(&lb, &ub, &xk, &pk, &tk);
-
     var ts: [2]f64 = undefined;
+
     var xt: [2]f64 = undefined;
     var xc: [2]f64 = undefined;
     var Wk: [2]usize = undefined;
